@@ -25,7 +25,7 @@ val RobotoFlex = FontFamily(
 )
 
 
-// i like thinking this like main fun
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,27 +73,6 @@ fun PomodoroApp() {
                 contentDescription = null,
                 modifier = Modifier.size(120.dp)
             )
-
-
-
-
-
-
-//            Text(
-//                text = "Pomodoro",
-//                modifier = Modifier
-//                    .background(
-//                        color = Color.Red,
-//                        shape = RoundedCornerShape(12.dp)
-//                    )
-//                    .border(
-//                        2.dp,
-//                        Color.White,
-//                        RoundedCornerShape(12.dp)
-//                    )
-//                    .padding(16.dp)
-//            )
-
 
         }
         Column(
@@ -172,8 +151,6 @@ fun PomodoroApp() {
                     containerColor = Color(0xFFFF4C4C).copy(alpha = 0.15f)
                 )
 
-
-// FF4C4C   FF4C4C
 
             ) {
                 Text(text = "Reset",
