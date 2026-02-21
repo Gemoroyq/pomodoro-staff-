@@ -42,13 +42,11 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PomodoroApp() {
+
+
     var timeLeft by remember { mutableIntStateOf(25 * 60)}
     var isRunning by remember { mutableStateOf(false)}
 
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val backgroundColor = if (isPressed) Color(0xFF6b4343) else Color(0xFFFF4C4C).copy(alpha = 0.15f)
-    val textColor = if (isPressed) Color.White  else Color(0xFF471515)
 
     LaunchedEffect(isRunning) {
         while (isRunning && timeLeft > 0) {
@@ -117,60 +115,63 @@ fun PomodoroApp() {
                 .background(Color(0xFFFFF2F2)),
             horizontalArrangement = Arrangement.Center
         ){
-            Button(onClick = { isRunning = true },
-                modifier = Modifier.size(100.dp, 70.dp),
-                interactionSource = interactionSource,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = backgroundColor,
-                            contentColor = textColor)
-
-
-
-            ) {
-                Text(text = "Start",
-                    fontSize = 21.sp
-                )
-            }
+            PomodoroButton(
+                text = "Start",
+                onClick = { isRunning = true },
+                modifier = Modifier.size(100.dp, 70.dp)
+            )
 
             Spacer(modifier = Modifier.width(16.dp))
 
-
-
-            Button(onClick = {isRunning = false},
-                modifier = Modifier.size(100.dp, 70.dp),
-                interactionSource = interactionSource,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = backgroundColor,
-                    contentColor = textColor))
-            {
-                Text(text = "Stop",
-                    fontSize = 21.sp
-                    )
-            }
+            PomodoroButton(
+                text = "Stop",
+                onClick = { isRunning = false },
+                modifier = Modifier.size(100.dp, 70.dp)
+            )
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Button(
+            PomodoroButton(
+                text = "Reset",
                 onClick = {
                     isRunning = false
-                    timeLeft = 25 * 60 },
-                modifier = Modifier.size(110.dp, 70.dp),
-                interactionSource = interactionSource,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = backgroundColor,
-                    contentColor = textColor))
-
-
-             {
-                Text(text = "Reset",
-                    fontSize = 21.sp
-                    )
-
-            }
-
-
+                    timeLeft = 25 * 60
+                },
+                modifier = Modifier.size(110.dp, 70.dp)
+            )
         }
-
         Spacer(modifier = Modifier.weight(1f))
     }
 }
+
+
+@Composable
+fun PomodoroButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val backgroundColor = if (isPressed) Color(0xFF6b4343) else Color(0xFFFF4C4C).copy(alpha = 0.15f)
+    val textColor = if (isPressed) Color.White else Color(0xFF471515)
+
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        interactionSource = interactionSource,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = backgroundColor,
+            contentColor = textColor
+        )
+    ) {
+        Text(
+            text = text,
+            fontSize = 21.sp
+        )
+    }
+
+}
+
+
