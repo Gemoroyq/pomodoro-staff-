@@ -56,7 +56,6 @@ data class PomodoroTheme(
     val buttonPressedColor: Color
 )
 
-// Данные для истории
 data class PomodoroSession(
     val startTime: Long,
     val workMinutes: Int,
@@ -133,7 +132,6 @@ fun PomodoroApp() {
     var themeIndex by remember { mutableIntStateOf(0) }
     val currentTheme = appThemes[themeIndex]
     
-    // Глобальное состояние истории и навигации
     val sessions = remember { mutableStateListOf<PomodoroSession>() }
     var showHistory by remember { mutableStateOf(false) }
 
@@ -281,7 +279,6 @@ fun TimerPage(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Кнопка Истории слева
             IconButton(onClick = onHistoryClick) {
                 Icon(
                     imageVector = Icons.Default.List,
@@ -291,7 +288,6 @@ fun TimerPage(
                 )
             }
 
-            // Выбор темы справа
             Row {
                 appThemes.forEachIndexed { index, themeItem ->
                     Box(
@@ -308,12 +304,10 @@ fun TimerPage(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Изображение удалено по просьбе пользователя
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(450.dp), // Немного увеличил высоту из-за удаления картинки
+                .height(450.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -331,7 +325,6 @@ fun TimerPage(
             )
         }
 
-        // Кнопка выбора режима с выпадающим меню (одна кнопка вместо нескольких)
         var expanded by remember { mutableStateOf(false) }
         val modes = listOf("25/5" to (25 to 5), "35/10" to (35 to 10), "50/10" to (50 to 10))
         
@@ -452,7 +445,13 @@ fun HistoryPage(
 ) {
     BackHandler(onBack = onBack)
     
-    val dateFormat = remember { SimpleDateFormat("HH:mm, dd MMM", Locale.getDefault()) }
+    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
+
+    // Группировка сессий по дням
+    val groupedSessions = sessions.groupBy { 
+        dateFormat.format(Date(it.startTime)) 
+    }
 
     Column(
         modifier = Modifier
@@ -469,7 +468,7 @@ fun HistoryPage(
             }
             Spacer(modifier = Modifier.width(16.dp))
             Text(
-                text = "History",
+                text = "Stats",
                 fontFamily = RobotoFlex,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
@@ -482,7 +481,7 @@ fun HistoryPage(
         if (sessions.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "No sessions yet",
+                    text = "No stats yet",
                     fontFamily = RobotoFlex,
                     color = theme.textColor.copy(alpha = 0.5f),
                     fontSize = 18.sp
@@ -490,45 +489,73 @@ fun HistoryPage(
             }
         } else {
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
-                items(sessions) { session ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = theme.buttonColor.copy(alpha = 0.1f)
-                        ),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                groupedSessions.forEach { (date, dailySessions) ->
+                    val totalWorkMinutes = dailySessions.sumOf { it.workMinutes }
+                    
+                    item {
+                        // Карточка статистики за день
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = theme.textColor.copy(alpha = 0.05f)
+                            ),
+                            shape = RoundedCornerShape(24.dp)
                         ) {
-                            Column {
-                                Text(
-                                    text = "Mode: ${session.workMinutes}/${session.breakMinutes}",
-                                    fontFamily = RobotoFlex,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = theme.textColor
-                                )
-                                Text(
-                                    text = dateFormat.format(Date(session.startTime)),
-                                    fontFamily = RobotoFlex,
-                                    fontSize = 14.sp,
-                                    color = theme.textColor.copy(alpha = 0.7f)
-                                )
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = date,
+                                        fontFamily = RobotoFlex,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = theme.textColor
+                                    )
+                                    Surface(
+                                        color = theme.buttonPressedColor,
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(
+                                            text = "$totalWorkMinutes min work",
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            color = Color.White,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                                
+                                Spacer(modifier = Modifier.height(12.dp))
+                                
+                                // Список сессий за этот день
+                                dailySessions.forEach { session ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "${session.workMinutes}/${session.breakMinutes} min",
+                                            fontFamily = RobotoFlex,
+                                            fontSize = 15.sp,
+                                            color = theme.textColor
+                                        )
+                                        Text(
+                                            text = timeFormat.format(Date(session.startTime)),
+                                            fontFamily = RobotoFlex,
+                                            fontSize = 15.sp,
+                                            color = theme.textColor.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                }
                             }
-                            Text(
-                                text = "Started",
-                                fontFamily = RobotoFlex,
-                                color = theme.textColor,
-                                fontWeight = FontWeight.Medium
-                            )
                         }
                     }
                 }
