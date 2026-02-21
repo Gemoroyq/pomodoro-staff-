@@ -14,6 +14,8 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
@@ -42,6 +44,11 @@ class MainActivity : ComponentActivity() {
 fun PomodoroApp() {
     var timeLeft by remember { mutableIntStateOf(25 * 60)}
     var isRunning by remember { mutableStateOf(false)}
+
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val backgroundColor = if (isPressed) Color(0xFF6b4343) else Color(0xFFFF4C4C).copy(alpha = 0.15f)
+    val textColor = if (isPressed) Color.White  else Color(0xFF471515)
 
     LaunchedEffect(isRunning) {
         while (isRunning && timeLeft > 0) {
@@ -112,16 +119,16 @@ fun PomodoroApp() {
         ){
             Button(onClick = { isRunning = true },
                 modifier = Modifier.size(100.dp, 70.dp),
+                interactionSource = interactionSource,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF4C4C).copy(alpha = 0.15f))
+                    containerColor = backgroundColor,
+                            contentColor = textColor)
 
 
 
             ) {
                 Text(text = "Start",
-                    color = Color(0xFF471515),
                     fontSize = 21.sp
-
                 )
             }
 
@@ -131,11 +138,12 @@ fun PomodoroApp() {
 
             Button(onClick = {isRunning = false},
                 modifier = Modifier.size(100.dp, 70.dp),
+                interactionSource = interactionSource,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF4C4C).copy(alpha = 0.15f)))
+                    containerColor = backgroundColor,
+                    contentColor = textColor))
             {
                 Text(text = "Stop",
-                    color = Color(0xFF471515),
                     fontSize = 21.sp
                     )
             }
@@ -147,14 +155,14 @@ fun PomodoroApp() {
                     isRunning = false
                     timeLeft = 25 * 60 },
                 modifier = Modifier.size(110.dp, 70.dp),
+                interactionSource = interactionSource,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF4C4C).copy(alpha = 0.15f)
-                )
+                    containerColor = backgroundColor,
+                    contentColor = textColor))
 
 
-            ) {
+             {
                 Text(text = "Reset",
-                    color = Color(0xFF471515),
                     fontSize = 21.sp
                     )
 
