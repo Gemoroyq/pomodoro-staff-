@@ -8,15 +8,22 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,12 +33,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.*
 
 val RobotoFlex = FontFamily(
     Font(R.font.roboto_flex)
@@ -39,12 +49,18 @@ val RobotoFlex = FontFamily(
 
 private const val CHANNEL_ID = "pomodoro_timer_channel"
 
-
 data class PomodoroTheme(
     val backgroundColor: Color,
     val textColor: Color,
     val buttonColor: Color,
     val buttonPressedColor: Color
+)
+
+// Данные для истории
+data class PomodoroSession(
+    val startTime: Long,
+    val workMinutes: Int,
+    val breakMinutes: Int
 )
 
 val appThemes = listOf(
@@ -114,10 +130,12 @@ fun showNotification(context: Context) {
 @Composable
 fun PomodoroApp() {
     val context = LocalContext.current
-    
-
     var themeIndex by remember { mutableIntStateOf(0) }
     val currentTheme = appThemes[themeIndex]
+    
+    // Глобальное состояние истории и навигации
+    val sessions = remember { mutableStateListOf<PomodoroSession>() }
+    var showHistory by remember { mutableStateOf(false) }
 
     var hasNotificationPermission by remember {
         mutableStateOf(
@@ -145,6 +163,37 @@ fun PomodoroApp() {
         }
     }
 
+    AnimatedContent(targetState = showHistory, label = "ScreenTransition") { isHistoryVisible ->
+        if (isHistoryVisible) {
+            HistoryPage(
+                sessions = sessions,
+                theme = currentTheme,
+                onBack = { showHistory = false }
+            )
+        } else {
+            TimerPage(
+                theme = currentTheme,
+                themeIndex = themeIndex,
+                onThemeChange = { themeIndex = it },
+                onHistoryClick = { showHistory = true },
+                onTimerStart = { work, rest ->
+                    sessions.add(0, PomodoroSession(System.currentTimeMillis(), work, rest))
+                },
+                context = context
+            )
+        }
+    }
+}
+
+@Composable
+fun TimerPage(
+    theme: PomodoroTheme,
+    themeIndex: Int,
+    onThemeChange: (Int) -> Unit,
+    onHistoryClick: () -> Unit,
+    onTimerStart: (Int, Int) -> Unit,
+    context: Context
+) {
     var initialTime by remember { mutableIntStateOf(25 * 60) }
     var breakTime by remember { mutableIntStateOf(5 * 60) }
     var timeLeft by remember { mutableIntStateOf(initialTime) }
@@ -168,12 +217,12 @@ fun PomodoroApp() {
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            containerColor = currentTheme.backgroundColor,
+            containerColor = theme.backgroundColor,
             title = {
                 Text(
                     text = "Time's up!",
                     fontFamily = RobotoFlex,
-                    color = currentTheme.textColor,
+                    color = theme.textColor,
                     fontSize = 24.sp
                 )
             },
@@ -181,7 +230,7 @@ fun PomodoroApp() {
                 Text(
                     text = "What would you like to do next?",
                     fontFamily = RobotoFlex,
-                    color = currentTheme.textColor,
+                    color = theme.textColor,
                     fontSize = 18.sp
                 )
             },
@@ -192,10 +241,11 @@ fun PomodoroApp() {
                         timeLeft = initialTime
                         isRunning = true
                         showDialog = false
+                        onTimerStart(initialTime / 60, breakTime / 60)
                     },
                     modifier = Modifier.width(100.dp),
                     fontSize = 18.sp,
-                    theme = currentTheme
+                    theme = theme
                 )
             },
             dismissButton = {
@@ -208,7 +258,7 @@ fun PomodoroApp() {
                     },
                     modifier = Modifier.width(100.dp),
                     fontSize = 18.sp,
-                    theme = currentTheme
+                    theme = theme
                 )
             }
         )
@@ -220,35 +270,50 @@ fun PomodoroApp() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(currentTheme.backgroundColor),
+            .background(theme.backgroundColor),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.End
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            appThemes.forEachIndexed { index, theme ->
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .padding(4.dp)
-                        .clip(CircleShape)
-                        .background(if (index == themeIndex) theme.textColor else theme.buttonPressedColor.copy(alpha = 0.5f))
-                        .clickable { themeIndex = index }
+            // Кнопка Истории слева
+            IconButton(onClick = onHistoryClick) {
+                Icon(
+                    imageVector = Icons.Default.List,
+                    contentDescription = "History",
+                    tint = theme.textColor,
+                    modifier = Modifier.size(32.dp)
                 )
+            }
+
+            // Выбор темы справа
+            Row {
+                appThemes.forEachIndexed { index, themeItem ->
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .padding(4.dp)
+                            .clip(CircleShape)
+                            .background(if (index == themeIndex) themeItem.textColor else themeItem.buttonPressedColor.copy(alpha = 0.5f))
+                            .clickable { onThemeChange(index) }
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
+        // Изображение удалено по просьбе пользователя
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(400.dp),
+                .height(450.dp), // Немного увеличил высоту из-за удаления картинки
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -256,41 +321,56 @@ fun PomodoroApp() {
                 text = "%02d".format(minutes),
                 fontSize = 170.sp,
                 fontFamily = RobotoFlex,
-                color = currentTheme.textColor
+                color = theme.textColor
             )
             Text(
                 text = "%02d".format(seconds),
                 fontSize = 170.sp,
                 fontFamily = RobotoFlex,
-                color = currentTheme.textColor
+                color = theme.textColor
             )
         }
 
-
-        Row(
+        // Кнопка выбора режима с выпадающим меню (одна кнопка вместо нескольких)
+        var expanded by remember { mutableStateOf(false) }
+        val modes = listOf("25/5" to (25 to 5), "35/10" to (35 to 10), "50/10" to (50 to 10))
+        
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
-            horizontalArrangement = Arrangement.Center
+                .padding(bottom = 12.dp)
+                .wrapContentSize(Alignment.TopCenter)
         ) {
-            val modes = listOf("25/5" to (25 to 5), "35/10" to (35 to 10), "50/10" to (50 to 10))
-            modes.forEach { (label, times) ->
-                PomodoroButton(
-                    text = label,
-                    onClick = {
-                        initialTime = times.first * 60
-                        breakTime = times.second * 60
-                        if (!isRunning) timeLeft = initialTime
-                    },
-                    modifier = Modifier.wrapContentSize().padding(horizontal = 4.dp),
-                    fontSize = 16.sp,
-                    theme = currentTheme
-                )
+            PomodoroButton(
+                text = "Mode: ${initialTime/60}/${breakTime/60}",
+                onClick = { expanded = true },
+                modifier = Modifier.wrapContentSize(),
+                fontSize = 16.sp,
+                theme = theme
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(theme.backgroundColor)
+            ) {
+                modes.forEach { (label, times) ->
+                    DropdownMenuItem(
+                        text = { 
+                            Text(
+                                text = label, 
+                                fontFamily = RobotoFlex, 
+                                color = theme.textColor 
+                            ) 
+                        },
+                        onClick = {
+                            initialTime = times.first * 60
+                            breakTime = times.second * 60
+                            if (!isRunning) timeLeft = initialTime
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
-
-
-
 
         Row(
             modifier = Modifier
@@ -309,7 +389,7 @@ fun PomodoroApp() {
                 },
                 modifier = Modifier.wrapContentSize(),
                 fontSize = 18.sp,
-                theme = currentTheme
+                theme = theme
             )
             
             Spacer(modifier = Modifier.width(40.dp))
@@ -322,7 +402,7 @@ fun PomodoroApp() {
                 },
                 modifier = Modifier.wrapContentSize(),
                 fontSize = 18.sp,
-                theme = currentTheme
+                theme = theme
             )
         }
 
@@ -332,9 +412,12 @@ fun PomodoroApp() {
         ) {
             PomodoroButton(
                 text = "Start",
-                onClick = { isRunning = true },
+                onClick = { 
+                    isRunning = true 
+                    onTimerStart(initialTime / 60, breakTime / 60)
+                },
                 modifier = Modifier.size(100.dp, 70.dp),
-                theme = currentTheme
+                theme = theme
             )
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -343,7 +426,7 @@ fun PomodoroApp() {
                 text = "Stop",
                 onClick = { isRunning = false },
                 modifier = Modifier.size(100.dp, 70.dp),
-                theme = currentTheme
+                theme = theme
             )
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -355,10 +438,102 @@ fun PomodoroApp() {
                     timeLeft = initialTime
                 },
                 modifier = Modifier.size(110.dp, 70.dp),
-                theme = currentTheme
+                theme = theme
+            )
+        }
+    }
+}
+
+@Composable
+fun HistoryPage(
+    sessions: List<PomodoroSession>,
+    theme: PomodoroTheme,
+    onBack: () -> Unit
+) {
+    BackHandler(onBack = onBack)
+    
+    val dateFormat = remember { SimpleDateFormat("HH:mm, dd MMM", Locale.getDefault()) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(theme.backgroundColor)
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = onBack) {
+                Text("← Back", color = theme.textColor, fontFamily = RobotoFlex, fontSize = 20.sp)
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = "History",
+                fontFamily = RobotoFlex,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                color = theme.textColor
             )
         }
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (sessions.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "No sessions yet",
+                    fontFamily = RobotoFlex,
+                    color = theme.textColor.copy(alpha = 0.5f),
+                    fontSize = 18.sp
+                )
+            }
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
+                items(sessions) { session ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = theme.buttonColor.copy(alpha = 0.1f)
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Mode: ${session.workMinutes}/${session.breakMinutes}",
+                                    fontFamily = RobotoFlex,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = theme.textColor
+                                )
+                                Text(
+                                    text = dateFormat.format(Date(session.startTime)),
+                                    fontFamily = RobotoFlex,
+                                    fontSize = 14.sp,
+                                    color = theme.textColor.copy(alpha = 0.7f)
+                                )
+                            }
+                            Text(
+                                text = "Started",
+                                fontFamily = RobotoFlex,
+                                color = theme.textColor,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
