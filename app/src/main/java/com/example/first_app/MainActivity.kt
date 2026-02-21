@@ -40,13 +40,66 @@ fun PomodoroApp() {
     // Текущее оставшееся время
     var timeLeft by remember { mutableIntStateOf(initialTime) }
     var isRunning by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(isRunning) {
-        while (isRunning && timeLeft > 0) {
-            delay(1000)
-            timeLeft--
+        if (isRunning) {
+            while (timeLeft > 0) {
+                delay(1000)
+                timeLeft--
+            }
+            if (timeLeft == 0) {
+                isRunning = false
+                showDialog = true
+            }
         }
-        if (timeLeft == 0) isRunning = false
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            containerColor = Color(0xFFFFF2F2),
+            title = {
+                Text(
+                    text = "Time's up!",
+                    fontFamily = RobotoFlex,
+                    color = Color(0xFF471515),
+                    fontSize = 24.sp
+                )
+            },
+            text = {
+                Text(
+                    text = "What would you like to do next?",
+                    fontFamily = RobotoFlex,
+                    color = Color(0xFF471515),
+                    fontSize = 18.sp
+                )
+            },
+            confirmButton = {
+                PomodoroButton(
+                    text = "Work",
+                    onClick = {
+                        timeLeft = initialTime
+                        isRunning = true
+                        showDialog = false
+                    },
+                    modifier = Modifier.width(100.dp),
+                    fontSize = 18.sp
+                )
+            },
+            dismissButton = {
+                PomodoroButton(
+                    text = "Rest",
+                    onClick = {
+                        timeLeft = 5 * 60 // 5 минут отдыха
+                        isRunning = true
+                        showDialog = false
+                    },
+                    modifier = Modifier.width(100.dp),
+                    fontSize = 18.sp
+                )
+            }
+        )
     }
 
     val minutes = timeLeft / 60
