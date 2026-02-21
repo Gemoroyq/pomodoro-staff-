@@ -39,7 +39,7 @@ val RobotoFlex = FontFamily(
 
 private const val CHANNEL_ID = "pomodoro_timer_channel"
 
-// 1. Класс для хранения твоих ЛИЧНЫХ настроек темы
+
 data class PomodoroTheme(
     val backgroundColor: Color,
     val textColor: Color,
@@ -47,21 +47,20 @@ data class PomodoroTheme(
     val buttonPressedColor: Color
 )
 
-// 2. Список твоих тем. Ты можешь менять цвета здесь на любые другие!
 val appThemes = listOf(
-    PomodoroTheme( // Розовый (оригинал)
+    PomodoroTheme(
         backgroundColor = Color(0xFFFFF2F2),
         textColor = Color(0xFF471515),
         buttonColor = Color(0xFFFF4C4C).copy(alpha = 0.15f),
         buttonPressedColor = Color(0xFF6b4343)
     ),
-    PomodoroTheme( // Голубой
+    PomodoroTheme(
         backgroundColor = Color(0xFFF2F5FF),
         textColor = Color(0xFF152247),
         buttonColor = Color(0xFF4C7BFF).copy(alpha = 0.15f),
         buttonPressedColor = Color(0xFF43516B)
     ),
-    PomodoroTheme( // Зеленый
+    PomodoroTheme(
         backgroundColor = Color(0xFFF2FFF5),
         textColor = Color(0xFF154723),
         buttonColor = Color(0xFF4CFF70).copy(alpha = 0.15f),
@@ -116,7 +115,7 @@ fun showNotification(context: Context) {
 fun PomodoroApp() {
     val context = LocalContext.current
     
-    // 3. Состояние текущей темы
+
     var themeIndex by remember { mutableIntStateOf(0) }
     val currentTheme = appThemes[themeIndex]
 
@@ -225,7 +224,7 @@ fun PomodoroApp() {
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Ряд для выбора темы (маленькие кружочки)
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -267,7 +266,7 @@ fun PomodoroApp() {
             )
         }
 
-        // Кнопки режимов (Пресеты)
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -292,7 +291,7 @@ fun PomodoroApp() {
 
 
 
-        // Кнопки для изменения времени таймера
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
