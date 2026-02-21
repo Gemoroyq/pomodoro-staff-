@@ -4,49 +4,42 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 val RobotoFlex = FontFamily(
     Font(R.font.roboto_flex)
 )
 
-
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
-            PomodoroApp()  // crazy that all app it's just function
+            PomodoroApp()
         }
     }
-
-
 }
 
 @Composable
 fun PomodoroApp() {
-
-
-    var timeLeft by remember { mutableIntStateOf(25 * 60)}
-    var isRunning by remember { mutableStateOf(false)}
-
+    // Состояние для времени, которое будет использоваться при сбросе
+    var initialTime by remember { mutableIntStateOf(25 * 60) }
+    // Текущее оставшееся время
+    var timeLeft by remember { mutableIntStateOf(initialTime) }
+    var isRunning by remember { mutableStateOf(false) }
 
     LaunchedEffect(isRunning) {
         while (isRunning && timeLeft > 0) {
@@ -59,62 +52,84 @@ fun PomodoroApp() {
     val minutes = timeLeft / 60
     val seconds = timeLeft % 60
 
-
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFFFF2F2)),
         verticalArrangement = Arrangement.Center
     ) {
-
-
         Row(
             modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF2F2)),
             horizontalArrangement = Arrangement.Center
-        ){
+        ) {
             Image(
                 painter = painterResource(R.drawable.focus),
                 contentDescription = null,
                 modifier = Modifier.size(120.dp)
             )
-
         }
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(500.dp)
+                .height(480.dp)
                 .background(Color(0xFFFFF2F2)),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(0.1.dp)
-
-        ){
+            verticalArrangement = Arrangement.Center
+        ) {
             Text(
                 text = "%02d".format(minutes),
-                fontSize = 208.sp,
+                fontSize = 200.sp,
                 fontFamily = RobotoFlex,
                 color = Color(0xFF471515)
             )
-
             Text(
                 text = "%02d".format(seconds),
-                fontSize = 208.sp,
+                fontSize = 200.sp,
                 fontFamily = RobotoFlex,
                 color = Color(0xFF471515)
             )
-
         }
 
-
-
-
+        // Кнопки для изменения времени таймера
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            PomodoroButton(
+                text = "-1 min",
+                onClick = {
+                    if (initialTime >= 60) {
+                        initialTime -= 60
+                        if (!isRunning) timeLeft = initialTime
+                    }
+                },
+                modifier = Modifier.wrapContentSize(),
+                fontSize = 18.sp
+            )
+            
+            Spacer(modifier = Modifier.width(40.dp))
+            
+            PomodoroButton(
+                text = "+1 min",
+                onClick = {
+                    initialTime += 60
+                    if (!isRunning) timeLeft = initialTime
+                },
+                modifier = Modifier.wrapContentSize(),
+                fontSize = 18.sp
+            )
+        }
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color(0xFFFFF2F2)),
             horizontalArrangement = Arrangement.Center
-        ){
+        ) {
             PomodoroButton(
                 text = "Start",
                 onClick = { isRunning = true },
@@ -135,7 +150,7 @@ fun PomodoroApp() {
                 text = "Reset",
                 onClick = {
                     isRunning = false
-                    timeLeft = 25 * 60
+                    timeLeft = initialTime
                 },
                 modifier = Modifier.size(110.dp, 70.dp)
             )
@@ -144,12 +159,12 @@ fun PomodoroApp() {
     }
 }
 
-
 @Composable
 fun PomodoroButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    fontSize: androidx.compose.ui.unit.TextUnit = 21.sp
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -168,10 +183,8 @@ fun PomodoroButton(
     ) {
         Text(
             text = text,
-            fontSize = 21.sp
+            fontSize = fontSize,
+            fontFamily = RobotoFlex
         )
     }
-
 }
-
-
